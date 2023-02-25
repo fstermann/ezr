@@ -16,6 +16,30 @@ class EzPattern:
     def compile(self):
         return re.compile(str(self))
 
+    def zero_or_more(self):
+        return self._quantify(zero_or_more)
+
+    def one_or_more(self):
+        return self._quantify(one_or_more)
+
+    def zero_or_one(self):
+        return self._quantify(zero_or_one)
+
+    def exactly(self, n):
+        return self._quantify(exactly(n))
+
+    def between(self, lower, upper):
+        return self._quantify(between(lower, upper))
+
+    def at_least(self, n):
+        return self._quantify(at_least(n))
+
+    def at_most(self, n):
+        return self._quantify(at_most(n))
+
+    def _quantify(self, quantifier: EzQuantifier):
+        return EzRegex(self, quantifier)
+
     def __str__(self) -> str:
         return self._pattern
 
@@ -29,7 +53,7 @@ class EzPattern:
         return EzRegex(other, self)
 
 
-class EzRegex:
+class EzRegex(EzPattern):
     _patterns: list[EzPattern | EzRegex]
 
     def __init__(self, *patterns):
@@ -38,6 +62,17 @@ class EzRegex:
             for p in patterns
         ]
         self._pattern = patterns
+
+    def compile(self):
+        return re.compile(str(self))
+
+    def as_charset(self):
+        return EzCharSet(*self._patterns)
+
+    def _quantify(self, quantifier: EzQuantifier):
+        if len(self._patterns) > 1:
+            self = self.as_charset()
+        return super()._quantify(quantifier)
 
     def __str__(self) -> str:
         return "".join(str(p) for p in self._patterns)
@@ -48,25 +83,36 @@ class EzRegex:
         _str = "\n".join(lines)
         return f"{self.__class__.__name__}(\n{_str}\n)"
 
-    def compile(self):
-        return re.compile(str(self))
-
     def __invert__(self):
         p = self._patterns
         if p and str(p[0]) == "^":
             return EzRegex(*p[1:])
         return EzCharSet(EzPattern("^"), *p)
 
-    def __add__(self, other: str | EzPattern | EzRegex) -> EzRegex:
-        return EzRegex(self, other)
-
-    def __radd__(self, other: str | EzPattern | EzRegex) -> EzRegex:
-        return EzRegex(other, self)
-
 
 class EzCharSet(EzRegex):
     def __str__(self) -> str:
-        return f"[{super().__str__()}]"
+        inner = super().__str__()
+        if len(self._patterns) <= 1:
+            return inner
+        return f"[{inner}]"
+
+
+class EzQuantifier(EzPattern):
+    def __init__(self, *, lower=None, upper=None, exact=None):
+        self._lower = lower
+        self._upper = upper
+        self._exact = exact
+
+    def __str__(self) -> str:
+        if self._exact is not None:
+            return f"{{{self._exact}}}"
+        default = f"{{{self._lower or ''},{self._upper or ''}}}"
+        return {
+            (0, 1): "?",
+            (0, None): "*",
+            (1, None): "+",
+        }.get((self._lower, self._upper), default)
 
 
 digit = EzPattern(r"\d")
@@ -80,3 +126,23 @@ start_of_string = EzPattern(r"^")
 end_of_string = EzPattern(r"$")
 start_of_word = EzPattern(r"\b")
 end_of_word = EzPattern(r"\B")
+
+zero_or_more = EzQuantifier(lower=0)
+one_or_more = EzQuantifier(lower=1)
+zero_or_one = EzQuantifier(lower=0, upper=1)
+
+
+def exactly(n: int) -> EzQuantifier:
+    return EzQuantifier(exact=n)
+
+
+def between(m: int, n: int) -> EzQuantifier:
+    return EzQuantifier(lower=m, upper=n)
+
+
+def at_least(n: int) -> EzQuantifier:
+    return EzQuantifier(lower=n)
+
+
+def at_most(n: int) -> EzQuantifier:
+    return EzQuantifier(upper=n)
