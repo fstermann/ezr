@@ -52,9 +52,6 @@ class EzPattern:
     def __radd__(self, other: str | EzPattern | EzRegex) -> EzRegex:
         return EzRegex(other, self)
 
-    def __or__(self, other: str | EzPattern | EzRegex) -> EzRegex:
-        return EzRegex(self, "|", other)
-
 
 class EzRegex(EzPattern):
     _patterns: list[EzPattern | EzRegex]
@@ -70,7 +67,7 @@ class EzRegex(EzPattern):
         return re.compile(str(self))
 
     def as_charset(self):
-        return EzCharSet(*self._patterns)
+        return EzCharset(*self._patterns)
 
     def _quantify(self, quantifier: EzQuantifier):
         if len(self._patterns) > 1:
@@ -90,10 +87,10 @@ class EzRegex(EzPattern):
         p = self._patterns
         if p and str(p[0]) == "^":
             return EzRegex(*p[1:])
-        return EzCharSet(EzPattern("^"), *p)
+        return EzCharset(EzPattern("^"), *p)
 
 
-class EzCharSet(EzRegex):
+class EzCharset(EzRegex):
     def __str__(self) -> str:
         inner = super().__str__()
         if len(self._patterns) <= 1:
@@ -109,6 +106,8 @@ class EzQuantifier(EzPattern):
         upper: int | None = None,
         exact: int | None = None,
     ):
+        if lower is None and upper is None and exact is None:
+            raise ValueError("At least one bound must be specified")
         if lower and upper and lower > upper:
             raise ValueError("Lower bound cannot be greater than upper bound")
         self._lower = lower
@@ -119,10 +118,7 @@ class EzQuantifier(EzPattern):
         if self._exact is not None:
             return f"{{{self._exact}}}"
         low, upp = self._lower, self._upper
-        if low is None and upp is None:
-            raise ValueError("At least one bound must be specified")
         low = 0 if upp == 1 else low
-
         lookup = {
             (0, 1): "?",
             (0, None): "*",

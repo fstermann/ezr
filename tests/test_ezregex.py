@@ -52,9 +52,31 @@ class TestEzRegex:
         assert re.match(regex_comp, "foo") is None
         assert re.match(regex_comp, "bar") is not None
 
+    def test_negation_already_negated(self):
+        regex = ~EzRegex("foo")
+        regex = ~regex
+        assert str(regex) == "foo"
+
+        regex_comp = regex.compile()
+        assert re.match(regex_comp, "foo") is not None
+        assert re.match(regex_comp, "bar") is None
+
     def test_digit(self):
         assert str(digit) == r"\d"
 
         regex_comp = digit.compile()
         assert re.match(regex_comp, "1") is not None
         assert re.match(regex_comp, "a") is None
+
+    def test_repr(self):
+        regex = EzRegex("foo", EzRegex("a", "b"), "bar")
+        assert repr(regex) == (
+            "EzRegex(\n"
+            "  EzPattern('foo')\n"
+            "  EzRegex(\n"
+            "    EzPattern('a')\n"
+            "    EzPattern('b')\n"
+            "  )\n"
+            "  EzPattern('bar')\n"
+            ")"
+        )

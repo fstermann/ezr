@@ -44,6 +44,10 @@ class TestEzQuantifier:
         with pytest.raises(ValueError):
             EzQuantifier(lower=5, upper=3)
 
+    def test_no_bounds(self):
+        with pytest.raises(ValueError):
+            EzQuantifier()
+
 
 class TestQuantifierEzPattern:
     def test_pattern_zero_or_more(self):
