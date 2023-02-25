@@ -52,6 +52,9 @@ class EzPattern:
     def __radd__(self, other: str | EzPattern | EzRegex) -> EzRegex:
         return EzRegex(other, self)
 
+    def __or__(self, other: str | EzPattern | EzRegex) -> EzRegex:
+        return EzRegex(self, "|", other)
+
 
 class EzRegex(EzPattern):
     _patterns: list[EzPattern | EzRegex]
@@ -99,7 +102,15 @@ class EzCharSet(EzRegex):
 
 
 class EzQuantifier(EzPattern):
-    def __init__(self, *, lower=None, upper=None, exact=None):
+    def __init__(
+        self,
+        *,
+        lower: int | None = None,
+        upper: int | None = None,
+        exact: int | None = None,
+    ):
+        if lower and upper and lower > upper:
+            raise ValueError("Lower bound cannot be greater than upper bound")
         self._lower = lower
         self._upper = upper
         self._exact = exact
@@ -107,12 +118,19 @@ class EzQuantifier(EzPattern):
     def __str__(self) -> str:
         if self._exact is not None:
             return f"{{{self._exact}}}"
-        default = f"{{{self._lower or ''},{self._upper or ''}}}"
-        return {
+        low, upp = self._lower, self._upper
+        if low is None and upp is None:
+            raise ValueError("At least one bound must be specified")
+        low = 0 if upp == 1 else low
+
+        lookup = {
             (0, 1): "?",
             (0, None): "*",
             (1, None): "+",
-        }.get((self._lower, self._upper), default)
+        }
+        if (low, upp) not in lookup:
+            return f"{{{low or ''},{upp or ''}}}"
+        return lookup[(low, upp)]  # type: ignore
 
 
 digit = EzPattern(r"\d")

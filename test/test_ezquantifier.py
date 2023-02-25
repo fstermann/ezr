@@ -36,6 +36,14 @@ class TestEzQuantifier:
         quant = EzQuantifier(upper=5)
         assert str(quant) == "{,5}"
 
+    def test_upper_1_conversion(self):
+        quant = EzQuantifier(upper=1)
+        assert str(quant) == "?"
+
+    def test_lower_greater_than_upper(self):
+        with pytest.raises(ValueError):
+            EzQuantifier(lower=5, upper=3)
+
 
 class TestQuantifierEzPattern:
     def test_pattern_zero_or_more(self):
