@@ -126,14 +126,12 @@ class EzPattern:
 
 class EzRegex(EzPattern):
     _patterns: list[EzPattern | EzRegex]
-    _grouped: bool = False
 
-    def __init__(self, *patterns, grouped: bool = False):
+    def __init__(self, *patterns):
         self._patterns = [
             EzPattern(str(p)) if not isinstance(p, (EzRegex, EzPattern)) else p
             for p in patterns
         ]
-        self._grouped = grouped
 
     def compile(self):
         return re.compile(str(self))
@@ -142,8 +140,7 @@ class EzRegex(EzPattern):
         return EzCharacterSet(*self._patterns)
 
     def as_group(self):
-        self._grouped = True
-        return self
+        return EzGroup(*self._patterns)
 
     def pretty(self, explain: bool = True) -> str:
         reprs = [p.pretty(explain=explain) for p in self._patterns]
@@ -189,6 +186,12 @@ class EzCharacterSet(EzRegex):
 
 
 any_of = EzCharacterSet
+
+
+class EzGroup(EzRegex):
+    def __str__(self) -> str:
+        inner = super().__str__()
+        return f"({inner})"
 
 
 class EzQuantifier(EzPattern):
