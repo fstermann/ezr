@@ -5,9 +5,9 @@ import re
 
 import pytest
 
-from ezr.ezregex import digit
-from ezr.ezregex import EzPattern
-from ezr.ezregex import EzRegex
+from ezr import digit
+from ezr import EzPattern
+from ezr import EzRegex
 
 
 class TestEzRegex:

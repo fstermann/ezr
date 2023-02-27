@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from ezr.ezregex import EzPattern
-from ezr.ezregex import EzQuantifier
-from ezr.ezregex import EzRegex
+from ezr import EzPattern
+from ezr import EzQuantifier
+from ezr import EzRegex
 
 
 class TestEzQuantifier:
@@ -21,7 +21,7 @@ class TestEzQuantifier:
         assert str(quant) == "?"
 
     def test_exact(self):
-        quant = EzQuantifier(exact=3)
+        quant = EzQuantifier(lower=3, upper=3)
         assert str(quant) == "{3}"
 
     def test_range(self):
@@ -94,6 +94,7 @@ class TestQuantifierEzRegex:
     def test_pattern_zero_or_more(self, patterns_expected):
         patterns, expected = patterns_expected
         regex = EzRegex(*patterns).zero_or_more()
+        print(regex.quantifier)
         assert str(regex) == f"{expected}*"
 
     def test_pattern_one_or_more(self, patterns_expected):
@@ -109,6 +110,7 @@ class TestQuantifierEzRegex:
     def test_pattern_exactly(self, patterns_expected):
         patterns, expected = patterns_expected
         regex = EzRegex(*patterns).exactly(3)
+        print(regex)
         assert str(regex) == f"{expected}{{3}}"
 
     def test_pattern_between(self, patterns_expected):

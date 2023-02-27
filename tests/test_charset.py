@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ezr.ezregex import EzCharacterSet
+from ezr import EzCharacterSet
 
 
 class TestCharset:

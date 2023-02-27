@@ -14,25 +14,31 @@ class ForbiddenError(Exception):
 
 class EzPattern:
     _pattern: str
+    _quantifier: EzQuantifier | None = None
 
-    def __init__(self, pattern, times: int | tuple[int, int] | None = None):
+    def __init__(
+        self,
+        pattern,
+        lower: int | None = None,
+        upper: int | None = None,
+    ):
         self._pattern = pattern
-        if times is None:
-            return
-        if isinstance(times, int):
-            self = self._quantify(exactly(times))
-        elif isinstance(times, tuple):
-            if len(times) > 2:
-                raise ValueError("Can only specify a minimum and maximum")
-            if len(times) == 0:
-                return
-            # TODO: Refactor this, mypy complains
-            # Argument 2 to "between" has incompatible type
-            # "Union[int, Tuple[int, int]]"; expected "Optional[int]"
-            if len(times) == 1:
-                self = self._quantify(at_least(times[0]))
-            else:
-                self = self._quantify(between(times[0], times[1]))
+        self._lower = lower
+        self._upper = upper
+        if lower is not None or upper is not None:
+            self._quantifier = EzQuantifier(lower=lower, upper=upper)
+
+    @classmethod
+    def from_quantifier(cls, pattern, quantifier: EzQuantifier):
+        return cls(pattern, lower=quantifier.lower, upper=quantifier.upper)
+
+    @property
+    def pattern(self) -> str:
+        return self._pattern
+
+    @property
+    def quantifier(self) -> EzQuantifier | None:
+        return self._quantifier
 
     def compile(self):
         return re.compile(str(self))
@@ -52,19 +58,8 @@ class EzPattern:
     def zero_or_one(self):
         return self._quantify(zero_or_one)
 
-    def optional(self, n: int | tuple[int, int] = 1):
-        if isinstance(n, tuple):
-            if len(n) > 2:
-                raise ValueError("Can only specify a minimum and maximum")
-            if len(n) == 0:
-                quantifier = exactly(0)
-            if len(n) == 1:
-                quantifier = at_least(n[0])
-            else:
-                quantifier = between(n[0], n[1])
-        else:
-            quantifier = between(0, n)
-        return self._quantify(quantifier)
+    def optional(self):
+        return self._quantify(at_most(1))
 
     def exactly(self, n):
         return self._quantify(exactly(n))
@@ -79,10 +74,11 @@ class EzPattern:
         return self._quantify(at_most(n))
 
     def _quantify(self, quantifier: EzQuantifier):
-        return EzRegex(self, quantifier)
+        return self.from_quantifier(self._pattern, quantifier)
 
     def __str__(self) -> str:
-        return self._pattern
+        quant = str(self.quantifier) if self.quantifier else ""
+        return f"{self._pattern}{quant}"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._pattern!r})"
@@ -127,14 +123,24 @@ class EzPattern:
 class EzRegex(EzPattern):
     _patterns: list[EzPattern | EzRegex]
 
-    def __init__(self, *patterns):
+    def __init__(
+        self,
+        *patterns,
+        lower: int | None = None,
+        upper: int | None = None,
+    ):
         self._patterns = [
             EzPattern(str(p)) if not isinstance(p, (EzRegex, EzPattern)) else p
             for p in patterns
         ]
+        self._lower = lower
+        self._upper = upper
+        if lower is not None or upper is not None:
+            self._quantifier = EzQuantifier(lower=lower, upper=upper)
 
-    def compile(self):
-        return re.compile(str(self))
+    @classmethod
+    def from_quantifier(cls, patterns, quantifier: EzQuantifier):
+        return cls(*patterns, lower=quantifier.lower, upper=quantifier.upper)
 
     def as_charset(self):
         return EzCharacterSet(*self._patterns)
@@ -150,10 +156,13 @@ class EzRegex(EzPattern):
     def _quantify(self, quantifier: EzQuantifier):
         if len(self._patterns) > 1:
             self = self.as_charset()
-        return super()._quantify(quantifier)
+        return self.from_quantifier(self._patterns, quantifier)
+        # return super()._quantify(quantifier)
 
     def __str__(self) -> str:
-        return "".join(str(p) for p in self._patterns)
+        quant = str(self.quantifier) if self.quantifier else ""
+        patterns = "".join(str(p) for p in self._patterns)
+        return f"{patterns}{quant}"
 
     def __repr__(self) -> str:
         reprs = [repr(p) for p in self._patterns]
@@ -170,10 +179,11 @@ class EzRegex(EzPattern):
 
 class EzCharacterSet(EzRegex):
     def __str__(self) -> str:
-        inner = super().__str__()
         if len(self._patterns) <= 1:
-            return inner
-        return f"[{inner}]"
+            return super().__str__()
+        quant = str(self.quantifier) if self.quantifier else ""
+        patterns = "".join(str(p) for p in self._patterns)
+        return f"[{patterns}]{quant}"
 
     def pretty(self, explain: bool = True) -> str:
         if not explain:
@@ -200,16 +210,22 @@ class EzQuantifier(EzPattern):
         *,
         lower: int | None = None,
         upper: int | None = None,
-        exact: int | None = None,
     ):
-        if lower is None and upper is None and exact is None:
+        if lower is None and upper is None:
             raise ValueError("At least one bound must be specified")
         if lower and upper and lower > upper:
             raise ValueError("Lower bound cannot be greater than upper bound")
         lower = 0 if upper == 1 else lower
         self._lower = lower
         self._upper = upper
-        self._exact = exact
+
+    @property
+    def lower(self) -> int | None:
+        return self._lower
+
+    @property
+    def upper(self) -> int | None:
+        return self._upper
 
     def pretty(self, explain: bool = True) -> str:
         prefix = f"{self!s:<4}"
@@ -218,8 +234,6 @@ class EzQuantifier(EzPattern):
             return prefix
         prefix += f"{INDENT*2}Quantifier. Matches"
         suffix = "of the preceding token"
-        if self._exact is not None:
-            return f"{prefix} exactly {self._exact} {suffix}"
         low, upp = self._lower, self._upper
         if low == upp:
             return f"{prefix} exactly {low} {suffix}"
@@ -236,9 +250,9 @@ class EzQuantifier(EzPattern):
         return f"{prefix} between {low} and {upp} {suffix}"
 
     def __str__(self) -> str:
-        if self._exact is not None:
-            return f"{{{self._exact}}}"
         low, upp = self._lower, self._upper
+        if low == upp and low is not None:
+            return f"{{{low}}}"
         lookup = {
             (0, 1): "?",
             (0, None): "*",
@@ -270,7 +284,7 @@ zero_or_one = EzQuantifier(lower=0, upper=1)
 
 
 def exactly(n: int) -> EzQuantifier:
-    return EzQuantifier(exact=n)
+    return EzQuantifier(lower=n, upper=n)
 
 
 def between(n: int | None = None, m: int | None = None) -> EzQuantifier:
@@ -290,6 +304,5 @@ def at_most(n: int) -> EzQuantifier:
 
 def optional(
     *patterns: str | EzPattern | EzRegex,
-    n: int | tuple[int, int] = 1,
 ) -> EzRegex:
-    return EzRegex(*patterns).optional(n)
+    return EzRegex(*patterns).optional()
