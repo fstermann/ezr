@@ -80,3 +80,21 @@ class TestEzRegex:
             "  EzPattern('bar')\n"
             ")"
         )
+
+    @pytest.mark.parametrize(
+        "a, b",
+        list(
+            itertools.product(
+                ["foo", EzPattern("foo"), EzRegex("foo")],
+                ["bar", EzPattern("bar"), EzRegex("bar")],
+            ),
+        )[1:],
+    )
+    def test_or_literal(self, a, b):
+        regex = a | b
+        assert str(regex) == "foo|bar"
+
+        regex_comp = regex.compile()
+        assert re.match(regex_comp, "foo") is not None
+        assert re.match(regex_comp, "bar") is not None
+        assert re.match(regex_comp, "baz") is None
