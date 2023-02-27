@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ezr.ezregex import EzCharset
+from ezr.ezregex import EzCharacterSet
 
 
 class TestCharset:
@@ -16,5 +16,5 @@ class TestCharset:
         ],
     )
     def test_charset(self, patterns, expected):
-        regex = EzCharset(*patterns)
+        regex = EzCharacterSet(*patterns)
         assert str(regex) == expected

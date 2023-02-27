@@ -139,7 +139,7 @@ class EzRegex(EzPattern):
         return re.compile(str(self))
 
     def as_charset(self):
-        return EzCharset(*self._patterns)
+        return EzCharacterSet(*self._patterns)
 
     def as_group(self):
         self._grouped = True
@@ -168,10 +168,10 @@ class EzRegex(EzPattern):
         p = self._patterns
         if p and str(p[0]) == "^":
             return EzRegex(*p[1:])
-        return EzCharset(EzPattern("^"), *p)
+        return EzCharacterSet(EzPattern("^"), *p)
 
 
-class EzCharset(EzRegex):
+class EzCharacterSet(EzRegex):
     def __str__(self) -> str:
         inner = super().__str__()
         if len(self._patterns) <= 1:
@@ -188,7 +188,7 @@ class EzCharset(EzRegex):
         return f"[{INDENT*2}{_annotation} {_explanation}]"
 
 
-any_of = EzCharset
+any_of = EzCharacterSet
 
 
 class EzQuantifier(EzPattern):
