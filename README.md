@@ -16,3 +16,20 @@ Inspired by the javascript library [magic-regexp](https://github.com/danielroe/m
 ```bash
 pip install ezr
 ```
+
+## Examples
+
+Create a phone number regex:
+```python
+from ezr.ezregex import EzRegex, digit, optional
+
+sep = optional("-", " ", ".")
+
+phone_number = EzRegex(
+    digit * 3,
+    sep,
+    digit * 3,
+    sep,
+    digit.between(4, 6),
+)
+```
