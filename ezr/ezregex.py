@@ -29,6 +29,11 @@ class EzPattern:
         lower: int | None = None,
         upper: int | None = None,
     ):
+        if not isinstance(pattern, str):
+            raise TypeError(f"Pattern must be a string, not {type(pattern)}")
+
+        if not re.match(r"\\?[a-zA-Z.^$|]", pattern):
+            raise ValueError("Pattern must be a single character")
         self._pattern = pattern
         self._lower = lower
         self._upper = upper
@@ -120,24 +125,22 @@ class EzPattern:
         return f"{self.__class__.__name__}({self._pattern!r})"
 
     def __add__(self, other: str | EzPattern | EzRegex) -> EzRegex:
-        self_patterns: Sequence[str | EzPattern | EzRegex]
-        other_patterns: Sequence[str | EzPattern | EzRegex]
-        self_patterns, other_patterns = [self], [other]
-        if isinstance(self, EzRegex):
-            self_patterns = self._patterns
-        if isinstance(other, EzRegex):
-            other_patterns = other._patterns
+        self_patterns = self.__get_patterns(self)
+        other_patterns = self.__get_patterns(other)
         return EzRegex(*self_patterns, *other_patterns)
 
     def __radd__(self, other: str | EzPattern | EzRegex) -> EzRegex:
-        self_patterns: Sequence[str | EzPattern | EzRegex]
-        other_patterns: Sequence[str | EzPattern | EzRegex]
-        self_patterns, other_patterns = [self], [other]
-        if isinstance(self, EzRegex):
-            self_patterns = self._patterns
-        if isinstance(other, EzRegex):
-            other_patterns = other._patterns
+        self_patterns = self.__get_patterns(self)
+        other_patterns = self.__get_patterns(other)
         return EzRegex(*other_patterns, *self_patterns)
+
+    @staticmethod
+    def __get_patterns(
+        x: str | EzPattern | EzRegex,
+    ) -> Sequence[EzPattern | EzGroup | EzCharacterSet | str]:
+        if isinstance(x, EzRegex):
+            return x._patterns
+        return [x]
 
     def __mul__(self, other: int | EzPattern | EzRegex) -> EzRegex:
         if not isinstance(other, int):
@@ -159,7 +162,7 @@ class EzPattern:
 class EzRegex(EzPattern):
     _annotation: str = "Regular Expression. Matches the following."
     _enclosing: tuple[str, str] = ("", "")
-    _patterns: list[EzPattern | EzRegex]
+    _patterns: list[EzPattern | EzGroup | EzCharacterSet]
 
     def __init__(
         self,
@@ -167,10 +170,12 @@ class EzRegex(EzPattern):
         lower: int | None = None,
         upper: int | None = None,
     ):
-        self._patterns = [
-            EzPattern(str(p)) if not isinstance(p, (EzRegex, EzPattern)) else p
-            for p in patterns
-        ]
+        self._patterns = []
+        for pat in patterns:
+            if not isinstance(pat, (EzRegex, EzPattern)):
+                self._patterns += [EzPattern(p) for p in list(str(pat))]
+            else:
+                self._patterns += [pat]
         self._lower = lower
         self._upper = upper
         if lower is not None or upper is not None:
@@ -210,11 +215,13 @@ class EzRegex(EzPattern):
 
     def _quantify(self, quantifier: EzQuantifier):
         if len(self._patterns) > 1:
-            self = self.as_charset()
+            self = self.as_group()
         return self.from_quantifier(self._patterns, quantifier)
 
     def __str__(self) -> str:
-        return f"{self.patterns_as_str}{self.quantifier_as_str}"
+        left, right = self._enclosing
+        pattern = f"{left}{self.patterns_as_str}{right}"
+        return f"{pattern}{self.quantifier_as_str}"
 
     def __repr__(self) -> str:
         reprs = [repr(p) for p in self._patterns]
@@ -232,13 +239,6 @@ class EzRegex(EzPattern):
 class EzCharacterSet(EzRegex):
     _annotation: str = "Character Set"
     _enclosing: tuple[str, str] = ("[", "]")
-
-    def __str__(self) -> str:
-        if len(self._patterns) <= 1:
-            return super().__str__()
-        quant = str(self.quantifier) if self.quantifier else ""
-        patterns = "".join(str(p) for p in self._patterns)
-        return f"[{patterns}]{quant}"
 
 
 any_of = EzCharacterSet

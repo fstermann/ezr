@@ -82,8 +82,8 @@ class TestQuantifierEzPattern:
 @pytest.fixture(
     params=[
         (["a"], "a"),
-        (["a", "b"], "[ab]"),
-        (["a", "b", "c"], "[abc]"),
+        (["a", "b"], "(ab)"),
+        (["a", "b", "c"], "(abc)"),
     ],
 )
 def patterns_expected(request):

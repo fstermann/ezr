@@ -30,17 +30,17 @@ class TestEzRegex:
     @pytest.mark.parametrize(
         "a, b",
         itertools.product(
-            ["foo", EzPattern("foo"), EzRegex("foo")],
-            ["bar", EzPattern("bar"), EzRegex("bar")],
+            ["f", EzPattern("f"), EzRegex("f")],
+            ["b", EzPattern("b"), EzRegex("b")],
         ),
     )
     def test_add_literal_regex(self, a, b):
         regex = EzRegex(a + b)
-        assert str(regex) == "foobar"
+        assert str(regex) == "fb"
 
         regex_comp = regex.compile()
-        assert re.match(regex_comp, "foobar") is not None
-        assert re.match(regex_comp, "barfoo") is None
+        assert re.match(regex_comp, "fb") is not None
+        assert re.match(regex_comp, "bf") is None
 
     def test_negation(self):
         regex = ~EzRegex("foo")
@@ -72,12 +72,16 @@ class TestEzRegex:
         regex = EzRegex("foo", EzRegex("a", "b"), "bar")
         assert repr(regex) == (
             "EzRegex(\n"
-            "  EzPattern('foo')\n"
+            "  EzPattern('f')\n"
+            "  EzPattern('o')\n"
+            "  EzPattern('o')\n"
             "  EzRegex(\n"
             "    EzPattern('a')\n"
             "    EzPattern('b')\n"
             "  )\n"
-            "  EzPattern('bar')\n"
+            "  EzPattern('b')\n"
+            "  EzPattern('a')\n"
+            "  EzPattern('r')\n"
             ")"
         )
 
@@ -85,16 +89,16 @@ class TestEzRegex:
         "a, b",
         list(
             itertools.product(
-                ["foo", EzPattern("foo"), EzRegex("foo")],
-                ["bar", EzPattern("bar"), EzRegex("bar")],
+                ["f", EzPattern("f"), EzRegex("f")],
+                ["b", EzPattern("b"), EzRegex("b")],
             ),
         )[1:],
     )
     def test_or_literal(self, a, b):
         regex = a | b
-        assert str(regex) == "foo|bar"
+        assert str(regex) == "f|b"
 
         regex_comp = regex.compile()
-        assert re.match(regex_comp, "foo") is not None
-        assert re.match(regex_comp, "bar") is not None
-        assert re.match(regex_comp, "baz") is None
+        assert re.match(regex_comp, "f") is not None
+        assert re.match(regex_comp, "b") is not None
+        assert re.match(regex_comp, "c") is None

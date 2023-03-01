@@ -33,7 +33,10 @@ class TestEzGroup:
         assert str(group) == expected
 
     def test_group_quantifier(self):
-        group = EzGroup("abc").one_or_more()
+        group = EzGroup("abc")
+        print(repr(group))
+        group = group.one_or_more()
+        print(repr(group))
         assert str(group) == "(abc)+"
 
     def test_group_quantifier_nested(self):

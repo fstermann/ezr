@@ -9,8 +9,8 @@ class TestCharset:
     @pytest.mark.parametrize(
         "patterns, expected",
         [
-            (["abc"], "abc"),
-            (["a"], "a"),
+            (["abc"], "[abc]"),
+            (["a"], "[a]"),
             (["a", "b"], "[ab]"),
             (["a", "b", "c"], "[abc]"),
         ],
