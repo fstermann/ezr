@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import re
+import string
 from typing import Sequence
 
 from ezr.util import bold
 
 INDENT = "  "
+TREE_START = "┌─"
+TREE_INDENT = "│ "
+TREE_BRANCH = "├─"
+TREE_END = "└─"
+TREE_LINE = "─"
 
 
 class ForbiddenError(Exception):
@@ -13,6 +19,7 @@ class ForbiddenError(Exception):
 
 
 class EzPattern:
+    _annotation: str = "Pattern"
     _pattern: str
     _quantifier: EzQuantifier | None = None
 
@@ -40,14 +47,44 @@ class EzPattern:
     def quantifier(self) -> EzQuantifier | None:
         return self._quantifier
 
+    @property
+    def quantifier_as_str(self) -> str:
+        if self._quantifier is None:
+            return ""
+        return str(self._quantifier)
+
+    @property
+    def pattern_type(self) -> str:
+        if self.pattern in string.digits:
+            return "Digit"
+        if self.pattern in string.ascii_lowercase:
+            return "Lowercase Letter"
+        if self.pattern in string.ascii_uppercase:
+            return "Uppercase Letter"
+        if self.pattern in string.whitespace:
+            return "Whitespace"
+        if self.pattern in string.punctuation:
+            return "Punctuation"
+        return "Character"
+
+    @property
+    def annotation(self) -> str:
+        return self._annotation
+
+    @property
+    def explanation(self) -> str:
+        return f"{self.pattern_type}. Matches {self.pattern}"
+
     def compile(self):
         return re.compile(str(self))
 
-    def pretty(self, explain: bool = True) -> str:
+    @property
+    def explain(self) -> str:
         base = f"{self._pattern!s:<4}"
-        if not explain:
-            return base
-        return f"{bold(base)}{INDENT*2} Character. Matches {self._pattern}"
+        pattern = f"{bold(base)}{INDENT}{self.explanation}"
+        if self.quantifier is None:
+            return pattern
+        return f"{pattern}\n{INDENT}{self.quantifier.explain}"
 
     def zero_or_more(self):
         return self._quantify(zero_or_more)
@@ -77,8 +114,7 @@ class EzPattern:
         return self.from_quantifier(self._pattern, quantifier)
 
     def __str__(self) -> str:
-        quant = str(self.quantifier) if self.quantifier else ""
-        return f"{self._pattern}{quant}"
+        return f"{self._pattern}{self.quantifier_as_str}"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._pattern!r})"
@@ -121,6 +157,8 @@ class EzPattern:
 
 
 class EzRegex(EzPattern):
+    _annotation: str = "Regular Expression. Matches the following."
+    _enclosing: tuple[str, str] = ("", "")
     _patterns: list[EzPattern | EzRegex]
 
     def __init__(
@@ -142,27 +180,41 @@ class EzRegex(EzPattern):
     def from_quantifier(cls, patterns, quantifier: EzQuantifier):
         return cls(*patterns, lower=quantifier.lower, upper=quantifier.upper)
 
+    @property
+    def patterns_as_str(self) -> str:
+        return "".join(str(p) for p in self._patterns)
+
+    @property
+    def explain(self) -> str:
+        lines = []
+        for p in self._patterns:
+            indent = f"{TREE_INDENT} "
+            if not isinstance(p, EzRegex):
+                indent += INDENT * 2
+
+            lines += [f"{indent}{s}" for s in p.explain.split("\n")]
+
+        patterns = "\n".join(lines)
+
+        start = f"{TREE_START} {bold(self._enclosing[0])}"
+        end = f"{TREE_END} {bold(self._enclosing[1])}"
+        quant = "\n" + self.quantifier.explain if self.quantifier else ""
+
+        return f"{start} {self._annotation}\n{patterns}\n{end}{quant}"
+
     def as_charset(self):
         return EzCharacterSet(*self._patterns)
 
     def as_group(self):
         return EzGroup(*self._patterns)
 
-    def pretty(self, explain: bool = True) -> str:
-        reprs = [p.pretty(explain=explain) for p in self._patterns]
-        lines = [f"{INDENT}{s}" for r in reprs for s in r.split("\n")]
-        return "\n".join(lines)
-
     def _quantify(self, quantifier: EzQuantifier):
         if len(self._patterns) > 1:
             self = self.as_charset()
         return self.from_quantifier(self._patterns, quantifier)
-        # return super()._quantify(quantifier)
 
     def __str__(self) -> str:
-        quant = str(self.quantifier) if self.quantifier else ""
-        patterns = "".join(str(p) for p in self._patterns)
-        return f"{patterns}{quant}"
+        return f"{self.patterns_as_str}{self.quantifier_as_str}"
 
     def __repr__(self) -> str:
         reprs = [repr(p) for p in self._patterns]
@@ -178,6 +230,9 @@ class EzRegex(EzPattern):
 
 
 class EzCharacterSet(EzRegex):
+    _annotation: str = "Character Set"
+    _enclosing: tuple[str, str] = ("[", "]")
+
     def __str__(self) -> str:
         if len(self._patterns) <= 1:
             return super().__str__()
@@ -185,23 +240,37 @@ class EzCharacterSet(EzRegex):
         patterns = "".join(str(p) for p in self._patterns)
         return f"[{patterns}]{quant}"
 
-    def pretty(self, explain: bool = True) -> str:
-        if not explain:
-            return str(self)
-        patterns = super().pretty(explain=explain).splitlines()
-        _str = "\n".join(f"{INDENT}{p}" for p in patterns)
-        _annotation = "Character set."
-        _explanation = f"Matches any of the following\n{_str}\n"
-        return f"[{INDENT*2}{_annotation} {_explanation}]"
-
 
 any_of = EzCharacterSet
 
 
 class EzGroup(EzRegex):
+    _annotation: str = "Group"
+    _enclosing: tuple[str, str] = ("(", ")")
+    _capture: bool = True
+
+    def __init__(
+        self,
+        *patterns,
+        capture: bool = True,
+        lower: int | None = None,
+        upper: int | None = None,
+    ):
+        super().__init__(*patterns, lower=lower, upper=upper)
+        self._capture = capture
+
+    @property
+    def capture(self) -> bool:
+        return self._capture
+
+    @property
+    def annotation(self) -> str:
+        prefix = "Capturing" if self.capture else "Non-capturing"
+        return f"{prefix} {self._annotation}"
+
     def __str__(self) -> str:
-        inner = super().__str__()
-        return f"({inner})"
+        capture = "" if self.capture else "?:"
+        return f"({capture}{self.patterns_as_str}){self.quantifier_as_str}"
 
 
 class EzQuantifier(EzPattern):
@@ -227,12 +296,11 @@ class EzQuantifier(EzPattern):
     def upper(self) -> int | None:
         return self._upper
 
-    def pretty(self, explain: bool = True) -> str:
+    @property
+    def explain(self) -> str:
         prefix = f"{self!s:<4}"
-        prefix = f"{INDENT}{bold(prefix)}"
-        if not explain:
-            return prefix
-        prefix += f"{INDENT*2}Quantifier. Matches"
+        prefix = f"{INDENT}{TREE_END} {bold(prefix)}"
+        prefix += f"{INDENT}Quantifier. Matches"
         suffix = "of the preceding token"
         low, upp = self._lower, self._upper
         if low == upp:

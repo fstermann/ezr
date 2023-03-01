@@ -8,6 +8,7 @@ from ezr.ezregex import between
 from ezr.ezregex import digit
 from ezr.ezregex import exactly
 from ezr.ezregex import EzCharacterSet
+from ezr.ezregex import EzGroup
 from ezr.ezregex import EzPattern
 from ezr.ezregex import EzQuantifier
 from ezr.ezregex import EzRegex
