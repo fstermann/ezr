@@ -13,6 +13,12 @@ TREE_BRANCH = "├─"
 TREE_END = "└─"
 TREE_LINE = "─"
 
+ALNUM = r"a-zA-Z0-9"
+LCASE_RANGE = r"[a-z]-[a-z]"
+UCASE_RANGE = r"[A-Z]-[A-Z]"
+NUM_RANGE = r"[0-9]-[0-9]"
+ANY_RANGE = rf"{LCASE_RANGE}|{UCASE_RANGE}|{NUM_RANGE}"
+
 
 class ForbiddenError(Exception):
     pass
@@ -31,9 +37,14 @@ class EzPattern:
     ):
         if not isinstance(pattern, str):
             raise TypeError(f"Pattern must be a string, not {type(pattern)}")
-
-        if not re.match(r"\\?[a-zA-Z.^$|]", pattern):
-            raise ValueError("Pattern must be a single character")
+        if not re.match(rf"\\?({ANY_RANGE}|[{ALNUM}.^$|])", pattern):
+            raise ValueError("Pattern must be a single character or a range")
+        if re.match(ANY_RANGE, pattern):
+            left, right = pattern.split("-")
+            if left > right:
+                raise ValueError("Range must be in ascending order")
+            self._annotation = "Range: "
+            self._annotation += f"Matches a character in the range {pattern}"
         self._pattern = pattern
         self._lower = lower
         self._upper = upper
@@ -153,10 +164,14 @@ class EzPattern:
         return self.exactly(other)
 
     def __or__(self, other: str | EzPattern | EzRegex) -> EzRegex:
-        return EzRegex(self, "|", other)
+        self_patterns = self.__get_patterns(self)
+        other_patterns = self.__get_patterns(other)
+        return EzRegex(*self_patterns, "|", *other_patterns)
 
     def __ror__(self, other: str | EzPattern | EzRegex) -> EzRegex:
-        return EzRegex(other, "|", self)
+        self_patterns = self.__get_patterns(self)
+        other_patterns = self.__get_patterns(other)
+        return EzRegex(*other_patterns, "|", *self_patterns)
 
 
 class EzRegex(EzPattern):
