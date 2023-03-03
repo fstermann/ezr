@@ -24,10 +24,10 @@ class ForbiddenError(Exception):
     pass
 
 
-class EzPattern:
+class Pattern:
     _annotation: str = "Pattern"
     _pattern: str
-    _quantifier: EzQuantifier | None = None
+    _quantifier: Quantifier | None = None
 
     def __init__(
         self,
@@ -49,10 +49,10 @@ class EzPattern:
         self._lower = lower
         self._upper = upper
         if lower is not None or upper is not None:
-            self._quantifier = EzQuantifier(lower=lower, upper=upper)
+            self._quantifier = Quantifier(lower=lower, upper=upper)
 
     @classmethod
-    def from_quantifier(cls, pattern, quantifier: EzQuantifier):
+    def from_quantifier(cls, pattern, quantifier: Quantifier):
         return cls(pattern, lower=quantifier.lower, upper=quantifier.upper)
 
     @staticmethod
@@ -65,7 +65,7 @@ class EzPattern:
         return self._pattern
 
     @property
-    def quantifier(self) -> EzQuantifier | None:
+    def quantifier(self) -> Quantifier | None:
         return self._quantifier
 
     @property
@@ -144,7 +144,7 @@ class EzPattern:
     def at_most(self, n: int, lazy: bool = False):
         return self._quantify(at_most(n, lazy=lazy))
 
-    def _quantify(self, quantifier: EzQuantifier):
+    def _quantify(self, quantifier: Quantifier):
         self._quantifier = quantifier
         return self
 
@@ -154,25 +154,25 @@ class EzPattern:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._pattern!r})"
 
-    def __add__(self, other: str | EzPattern | EzRegex) -> EzRegex:
+    def __add__(self, other: str | Pattern | EzRegex) -> EzRegex:
         self_patterns = self.__get_patterns(self)
         other_patterns = self.__get_patterns(other)
         return EzRegex(*self_patterns, *other_patterns)
 
-    def __radd__(self, other: str | EzPattern | EzRegex) -> EzRegex:
+    def __radd__(self, other: str | Pattern | EzRegex) -> EzRegex:
         self_patterns = self.__get_patterns(self)
         other_patterns = self.__get_patterns(other)
         return EzRegex(*other_patterns, *self_patterns)
 
     @staticmethod
     def is_special_set(x) -> bool:
-        return isinstance(x, (EzGroup, EzCharacterSet))
+        return isinstance(x, (Group, CharacterSet))
 
     @staticmethod
     def __get_patterns(
-        x: str | EzPattern | EzRegex,
-    ) -> Sequence[EzPattern | EzGroup | EzCharacterSet | str]:
-        if isinstance(x, EzRegex) and not EzPattern.is_special_set(x):
+        x: str | Pattern | EzRegex,
+    ) -> Sequence[Pattern | Group | CharacterSet | str]:
+        if isinstance(x, EzRegex) and not Pattern.is_special_set(x):
             return x._patterns
         return [x]
 
@@ -191,12 +191,12 @@ class EzPattern:
     def __rmul__(self, other: int) -> EzRegex:
         return self.__mul__(other)
 
-    def __or__(self, other: str | EzPattern | EzRegex) -> EzRegex:
+    def __or__(self, other: str | Pattern | EzRegex) -> EzRegex:
         self_patterns = self.__get_patterns(self)
         other_patterns = self.__get_patterns(other)
         return EzRegex(*self_patterns, "|", *other_patterns)
 
-    def __ror__(self, other: str | EzPattern | EzRegex) -> EzRegex:
+    def __ror__(self, other: str | Pattern | EzRegex) -> EzRegex:
         self_patterns = self.__get_patterns(self)
         other_patterns = self.__get_patterns(other)
         return EzRegex(*other_patterns, "|", *self_patterns)
@@ -207,10 +207,10 @@ class EzPattern:
         return self.at_least(other + 1)
 
 
-class EzRegex(EzPattern):
+class EzRegex(Pattern):
     _annotation: str = "Regular Expression. Matches the following."
     _enclosing: tuple[str, str] = ("", "")
-    _patterns: list[EzPattern | EzGroup | EzCharacterSet]
+    _patterns: list[Pattern | Group | CharacterSet]
 
     def __init__(
         self,
@@ -220,17 +220,17 @@ class EzRegex(EzPattern):
     ):
         self._patterns = []
         for pat in patterns:
-            if not isinstance(pat, (EzRegex, EzPattern)):
-                self._patterns += [EzPattern(p) for p in list(str(pat))]
+            if not isinstance(pat, (EzRegex, Pattern)):
+                self._patterns += [Pattern(p) for p in list(str(pat))]
             else:
                 self._patterns += [pat]
         self._lower = lower
         self._upper = upper
         if lower is not None or upper is not None:
-            self._quantifier = EzQuantifier(lower=lower, upper=upper)
+            self._quantifier = Quantifier(lower=lower, upper=upper)
 
     @classmethod
-    def from_quantifier(cls, patterns, quantifier: EzQuantifier):
+    def from_quantifier(cls, patterns, quantifier: Quantifier):
         return cls(*patterns, lower=quantifier.lower, upper=quantifier.upper)
 
     @property
@@ -257,13 +257,13 @@ class EzRegex(EzPattern):
         return f"{start} {self._annotation}\n{patterns}\n{end}{quant}"
 
     def as_charset(self):
-        return EzCharacterSet(*self._patterns)
+        return CharacterSet(*self._patterns)
 
     def as_group(self):
-        return EzGroup(*self._patterns)
+        return Group(*self._patterns)
 
-    def _quantify(self, quantifier: EzQuantifier):
-        if not isinstance(self, EzCharacterSet) and len(self._patterns) > 1:
+    def _quantify(self, quantifier: Quantifier):
+        if not isinstance(self, CharacterSet) and len(self._patterns) > 1:
             self = self.as_group()
         return super()._quantify(quantifier)
 
@@ -282,15 +282,15 @@ class EzRegex(EzPattern):
         p = self._patterns
         if p and str(p[0]) == "^":
             return EzRegex(*p[1:])
-        return EzCharacterSet(EzPattern("^"), *p)
+        return CharacterSet(Pattern("^"), *p)
 
 
-class EzCharacterSet(EzRegex):
+class CharacterSet(EzRegex):
     _annotation: str = "Character Set. Matches any of the following."
     _enclosing: tuple[str, str] = ("[", "]")
 
 
-class EzGroup(EzRegex):
+class Group(EzRegex):
     _annotation: str = "Group"
     _enclosing: tuple[str, str] = ("(", ")")
     _capture: bool = True
@@ -344,7 +344,7 @@ class EzGroup(EzRegex):
         return f"({prefix}{self.patterns_as_str}){self.quantifier_as_str}"
 
 
-class EzQuantifier(EzPattern):
+class Quantifier(Pattern):
     _lazy = False
     _special_cases: dict[tuple[int | None, int | None], str] = {
         (0, 1): "?",
@@ -419,67 +419,67 @@ class EzQuantifier(EzPattern):
         return f"{self.__class__.__name__}({str(self)})"
 
 
-digit = EzPattern(r"\d")
-whitespace = EzPattern(r"\s")
-word = EzPattern(r"\w")
-non_digit = EzPattern(r"\D")
-non_whitespace = EzPattern(r"\S")
-non_word = EzPattern(r"\W")
-any_char = EzPattern(r".")
-start_of_string = EzPattern(r"^")
-end_of_string = EzPattern(r"$")
-start_of_word = EzPattern(r"\b")
-end_of_word = EzPattern(r"\B")
+digit = Pattern(r"\d")
+whitespace = Pattern(r"\s")
+word = Pattern(r"\w")
+non_digit = Pattern(r"\D")
+non_whitespace = Pattern(r"\S")
+non_word = Pattern(r"\W")
+any_char = Pattern(r".")
+start_of_string = Pattern(r"^")
+end_of_string = Pattern(r"$")
+start_of_word = Pattern(r"\b")
+end_of_word = Pattern(r"\B")
 
 
-def zero_or_more(lazy: bool = False) -> EzQuantifier:
-    return EzQuantifier(lower=0, lazy=lazy)
+def zero_or_more(lazy: bool = False) -> Quantifier:
+    return Quantifier(lower=0, lazy=lazy)
 
 
-def one_or_more(lazy: bool = False) -> EzQuantifier:
-    return EzQuantifier(lower=1, lazy=lazy)
+def one_or_more(lazy: bool = False) -> Quantifier:
+    return Quantifier(lower=1, lazy=lazy)
 
 
-def zero_or_one(lazy: bool = False) -> EzQuantifier:
-    return EzQuantifier(lower=0, upper=1, lazy=lazy)
+def zero_or_one(lazy: bool = False) -> Quantifier:
+    return Quantifier(lower=0, upper=1, lazy=lazy)
 
 
-def exactly(n: int, lazy: bool = False) -> EzQuantifier:
-    return EzQuantifier(lower=n, upper=n, lazy=lazy)
+def exactly(n: int, lazy: bool = False) -> Quantifier:
+    return Quantifier(lower=n, upper=n, lazy=lazy)
 
 
 def between(
     n: int | None = None,
     m: int | None = None,
     lazy: bool = False,
-) -> EzQuantifier:
-    return EzQuantifier(lower=n, upper=m, lazy=lazy)
+) -> Quantifier:
+    return Quantifier(lower=n, upper=m, lazy=lazy)
 
 
-def at_least(n: int, lazy: bool = False) -> EzQuantifier:
-    return EzQuantifier(lower=n, lazy=lazy)
+def at_least(n: int, lazy: bool = False) -> Quantifier:
+    return Quantifier(lower=n, lazy=lazy)
 
 
-def at_most(n: int, lazy: bool = False) -> EzQuantifier:
-    return EzQuantifier(upper=n, lazy=lazy)
+def at_most(n: int, lazy: bool = False) -> Quantifier:
+    return Quantifier(upper=n, lazy=lazy)
 
 
 # ---
 
 
 def optional(
-    *patterns: str | EzPattern | EzRegex,
+    *patterns: str | Pattern | EzRegex,
 ) -> EzRegex:
     return EzRegex(*patterns).optional()
 
 
 def any_of(
-    *patterns: str | EzPattern | EzRegex,
+    *patterns: str | Pattern | EzRegex,
 ) -> EzRegex:
     """Match any of the given patterns.
 
     Args:
-        patterns (str | EzPattern | EzRegex): Any number of patterns.
+        patterns (str | Pattern | EzRegex): Any number of patterns.
 
 
     Example:
@@ -494,12 +494,12 @@ def any_of(
         EzRegex: EzRegex object.
     """
     if len(patterns) == 1 and isinstance(patterns[0], str):
-        return EzCharacterSet(patterns[0])
+        return CharacterSet(patterns[0])
     if len(patterns) > 1:
-        if any(not EzPattern.is_valid_pattern(str(p)) for p in patterns):
-            new_patterns: list[str | EzPattern | EzRegex]
+        if any(not Pattern.is_valid_pattern(str(p)) for p in patterns):
+            new_patterns: list[str | Pattern | EzRegex]
             new_patterns = ["|"] * (len(patterns) * 2 - 1)
             new_patterns[0::2] = patterns
-            return EzGroup(*new_patterns)
-        return EzCharacterSet(*patterns)
+            return Group(*new_patterns)
+        return CharacterSet(*patterns)
     raise TypeError(f"Dont know how to handle {patterns}")

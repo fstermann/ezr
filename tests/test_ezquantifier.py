@@ -2,80 +2,80 @@ from __future__ import annotations
 
 import pytest
 
-from ezr import EzPattern
-from ezr import EzQuantifier
 from ezr import EzRegex
+from ezr import Pattern
+from ezr import Quantifier
 
 
-class TestEzQuantifier:
+class TestQuantifier:
     def test_zero_or_more(self):
-        quant = EzQuantifier(lower=0)
+        quant = Quantifier(lower=0)
         assert str(quant) == "*"
 
     def test_one_or_more(self):
-        quant = EzQuantifier(lower=1)
+        quant = Quantifier(lower=1)
         assert str(quant) == "+"
 
     def test_zero_or_one(self):
-        quant = EzQuantifier(lower=0, upper=1)
+        quant = Quantifier(lower=0, upper=1)
         assert str(quant) == "?"
 
     def test_exact(self):
-        quant = EzQuantifier(lower=3, upper=3)
+        quant = Quantifier(lower=3, upper=3)
         assert str(quant) == "{3}"
 
     def test_range(self):
-        quant = EzQuantifier(lower=3, upper=5)
+        quant = Quantifier(lower=3, upper=5)
         assert str(quant) == "{3,5}"
 
     def test_range_no_upper(self):
-        quant = EzQuantifier(lower=3)
+        quant = Quantifier(lower=3)
         assert str(quant) == "{3,}"
 
     def test_range_no_lower(self):
-        quant = EzQuantifier(upper=5)
+        quant = Quantifier(upper=5)
         assert str(quant) == "{,5}"
 
     def test_upper_1_conversion(self):
-        quant = EzQuantifier(upper=1)
+        quant = Quantifier(upper=1)
         assert str(quant) == "?"
 
     def test_lower_greater_than_upper(self):
         with pytest.raises(ValueError):
-            EzQuantifier(lower=5, upper=3)
+            Quantifier(lower=5, upper=3)
 
     def test_no_bounds(self):
         with pytest.raises(ValueError):
-            EzQuantifier()
+            Quantifier()
 
 
-class TestQuantifierEzPattern:
+class TestQuantifierPattern:
     def test_pattern_zero_or_more(self):
-        pattern = EzPattern("a").zero_or_more()
+        pattern = Pattern("a").zero_or_more()
         assert str(pattern) == "a*"
 
     def test_pattern_one_or_more(self):
-        pattern = EzPattern("a").one_or_more()
+        pattern = Pattern("a").one_or_more()
         assert str(pattern) == "a+"
 
     def test_pattern_zero_or_one(self):
-        pattern = EzPattern("a").zero_or_one()
+        pattern = Pattern("a").zero_or_one()
         assert str(pattern) == "a?"
 
     def test_pattern_exactly(self):
-        pattern = EzPattern("a").exactly(3)
+        pattern = Pattern("a").exactly(3)
         assert str(pattern) == "a{3}"
 
     def test_pattern_between(self):
-        pattern = EzPattern("a").between(3, 5)
+        pattern = Pattern("a").between(3, 5)
         assert str(pattern) == "a{3,5}"
 
     def test_pattern_at_least(self):
-        pattern = EzPattern("a").at_least(3)
+        pattern = Pattern("a").at_least(3)
         assert str(pattern) == "a{3,}"
 
     def test_pattern_at_most(self):
-        pattern = EzPattern("a").at_most(5)
+        pattern = Pattern("a").at_most(5)
         assert str(pattern) == "a{,5}"
 
 

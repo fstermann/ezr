@@ -6,8 +6,8 @@ import re
 import pytest
 
 from ezr import digit
-from ezr import EzPattern
 from ezr import EzRegex
+from ezr import Pattern
 
 
 class TestEzRegex:
@@ -30,8 +30,8 @@ class TestEzRegex:
     @pytest.mark.parametrize(
         "a, b",
         itertools.product(
-            ["f", EzPattern("f"), EzRegex("f")],
-            ["b", EzPattern("b"), EzRegex("b")],
+            ["f", Pattern("f"), EzRegex("f")],
+            ["b", Pattern("b"), EzRegex("b")],
         ),
     )
     def test_add_literal_regex(self, a, b):
@@ -72,16 +72,16 @@ class TestEzRegex:
         regex = EzRegex("foo", EzRegex("a", "b"), "bar")
         assert repr(regex) == (
             "EzRegex(\n"
-            "  EzPattern('f')\n"
-            "  EzPattern('o')\n"
-            "  EzPattern('o')\n"
+            "  Pattern('f')\n"
+            "  Pattern('o')\n"
+            "  Pattern('o')\n"
             "  EzRegex(\n"
-            "    EzPattern('a')\n"
-            "    EzPattern('b')\n"
+            "    Pattern('a')\n"
+            "    Pattern('b')\n"
             "  )\n"
-            "  EzPattern('b')\n"
-            "  EzPattern('a')\n"
-            "  EzPattern('r')\n"
+            "  Pattern('b')\n"
+            "  Pattern('a')\n"
+            "  Pattern('r')\n"
             ")"
         )
 
@@ -89,8 +89,8 @@ class TestEzRegex:
         "a, b",
         list(
             itertools.product(
-                ["f", EzPattern("f"), EzRegex("f")],
-                ["b", EzPattern("b"), EzRegex("b")],
+                ["f", Pattern("f"), EzRegex("f")],
+                ["b", Pattern("b"), EzRegex("b")],
             ),
         )[1:],
     )

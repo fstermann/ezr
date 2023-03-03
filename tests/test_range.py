@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from ezr import EzPattern
+from ezr import Pattern
 
 
 class TestEzRange:
@@ -11,5 +11,5 @@ class TestEzRange:
         ["a-z", "A-Z", "0-9", "b-q", "B-M", "1-8"],
     )
     def test_character_range(self, pattern):
-        range_ = EzPattern(pattern)
+        range_ = Pattern(pattern)
         assert str(range_) == pattern
