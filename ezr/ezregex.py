@@ -294,20 +294,43 @@ class EzGroup(EzRegex):
     _annotation: str = "Group"
     _enclosing: tuple[str, str] = ("(", ")")
     _capture: bool = True
+    _name: str | None = None
 
     def __init__(
         self,
         *patterns,
+        name: str | None = None,
         capture: bool = True,
         lower: int | None = None,
         upper: int | None = None,
     ):
         super().__init__(*patterns, lower=lower, upper=upper)
-        self._capture = capture
+        if name and not capture:
+            raise ValueError("Cannot name a non-capturing group")
+        self.name = name
+        self.capture = capture
+
+    @property
+    def name(self) -> str | None:
+        return self._name
+
+    @name.setter
+    def name(self, name: str | None):
+        if name and not re.match(r"\w+", name):
+            err = "Invalid group name. "
+            err += "Please use only alphanumeric characters."
+            raise ValueError(err)
+        self._name = name
 
     @property
     def capture(self) -> bool:
         return self._capture
+
+    @capture.setter
+    def capture(self, capture: bool):
+        if self.name and not capture:
+            raise ValueError("Named group cannot be non-capturing")
+        self._capture = capture
 
     @property
     def annotation(self) -> str:
@@ -315,8 +338,10 @@ class EzGroup(EzRegex):
         return f"{prefix} {self._annotation}"
 
     def __str__(self) -> str:
+        name = f"?P<{self.name}>" if self.name else ""
         capture = "" if self.capture else "?:"
-        return f"({capture}{self.patterns_as_str}){self.quantifier_as_str}"
+        prefix = f"{name}{capture}"
+        return f"({prefix}{self.patterns_as_str}){self.quantifier_as_str}"
 
 
 class EzQuantifier(EzPattern):
