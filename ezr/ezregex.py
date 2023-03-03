@@ -116,19 +116,19 @@ class Pattern:
         return f"{pattern}\n{INDENT}{self.quantifier.explain}"
 
     def zero_or_more(self, lazy: bool = False):
-        return self._quantify(zero_or_more(lazy=lazy))
+        return self._quantify(Quantifier(lower=0, lazy=lazy))
 
     def one_or_more(self, lazy: bool = False):
-        return self._quantify(one_or_more(lazy=lazy))
+        return self._quantify(Quantifier(lower=1, lazy=lazy))
 
     def zero_or_one(self, lazy: bool = False):
-        return self._quantify(zero_or_one(lazy=lazy))
+        return self._quantify(Quantifier(lower=1, upper=1, lazy=lazy))
 
     def optional(self, lazy: bool = False):
-        return self._quantify(at_most(1, lazy=lazy))
+        return self._quantify(Quantifier(upper=1, lazy=lazy))
 
     def exactly(self, n: int, lazy: bool = False):
-        return self._quantify(exactly(n, lazy=lazy))
+        return self._quantify(Quantifier(lower=n, upper=n, lazy=lazy))
 
     def between(
         self,
@@ -136,13 +136,13 @@ class Pattern:
         upper: int | None = None,
         lazy: bool = False,
     ):
-        return self._quantify(between(lower, upper, lazy=lazy))
+        return self._quantify(Quantifier(lower=lower, upper=upper, lazy=lazy))
 
     def at_least(self, n: int, lazy: bool = False):
-        return self._quantify(at_least(n, lazy=lazy))
+        return self._quantify(Quantifier(lower=n, lazy=lazy))
 
     def at_most(self, n: int, lazy: bool = False):
-        return self._quantify(at_most(n, lazy=lazy))
+        return self._quantify(Quantifier(upper=n, lazy=lazy))
 
     def _quantify(self, quantifier: Quantifier):
         self._quantifier = quantifier
@@ -417,89 +417,3 @@ class Quantifier(Pattern):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({str(self)})"
-
-
-digit = Pattern(r"\d")
-whitespace = Pattern(r"\s")
-word = Pattern(r"\w")
-non_digit = Pattern(r"\D")
-non_whitespace = Pattern(r"\S")
-non_word = Pattern(r"\W")
-any_char = Pattern(r".")
-start_of_string = Pattern(r"^")
-end_of_string = Pattern(r"$")
-start_of_word = Pattern(r"\b")
-end_of_word = Pattern(r"\B")
-
-
-def zero_or_more(lazy: bool = False) -> Quantifier:
-    return Quantifier(lower=0, lazy=lazy)
-
-
-def one_or_more(lazy: bool = False) -> Quantifier:
-    return Quantifier(lower=1, lazy=lazy)
-
-
-def zero_or_one(lazy: bool = False) -> Quantifier:
-    return Quantifier(lower=0, upper=1, lazy=lazy)
-
-
-def exactly(n: int, lazy: bool = False) -> Quantifier:
-    return Quantifier(lower=n, upper=n, lazy=lazy)
-
-
-def between(
-    n: int | None = None,
-    m: int | None = None,
-    lazy: bool = False,
-) -> Quantifier:
-    return Quantifier(lower=n, upper=m, lazy=lazy)
-
-
-def at_least(n: int, lazy: bool = False) -> Quantifier:
-    return Quantifier(lower=n, lazy=lazy)
-
-
-def at_most(n: int, lazy: bool = False) -> Quantifier:
-    return Quantifier(upper=n, lazy=lazy)
-
-
-# ---
-
-
-def optional(
-    *patterns: str | Pattern | EzRegex,
-) -> EzRegex:
-    return EzRegex(*patterns).optional()
-
-
-def any_of(
-    *patterns: str | Pattern | EzRegex,
-) -> EzRegex:
-    """Match any of the given patterns.
-
-    Args:
-        patterns (str | Pattern | EzRegex): Any number of patterns.
-
-
-    Example:
-        >>> any_of("a", "b", "c")
-        [abc]
-        >>> any_of("abc")
-        [abc]
-        >>> any_of("foo", "bar", "baz")
-        (foo|bar|baz)
-
-    Returns:
-        EzRegex: EzRegex object.
-    """
-    if len(patterns) == 1 and isinstance(patterns[0], str):
-        return CharacterSet(patterns[0])
-    if len(patterns) > 1:
-        if any(not Pattern.is_valid_pattern(str(p)) for p in patterns):
-            new_patterns: list[str | Pattern | EzRegex]
-            new_patterns = ["|"] * (len(patterns) * 2 - 1)
-            new_patterns[0::2] = patterns
-            return Group(*new_patterns)
-        return CharacterSet(*patterns)
-    raise TypeError(f"Dont know how to handle {patterns}")
