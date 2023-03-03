@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ezr.ezregex import any_char
+from ezr.ezregex import any_of
 from ezr.ezregex import at_least
 from ezr.ezregex import at_most
 from ezr.ezregex import between

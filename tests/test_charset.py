@@ -18,3 +18,8 @@ class TestCharset:
     def test_charset(self, patterns, expected):
         regex = EzCharacterSet(*patterns)
         assert str(regex) == expected
+
+    def test_charset_quantifier(self):
+        regex = EzCharacterSet("abc")
+        regex = regex.one_or_more()
+        assert str(regex) == "[abc]+"
