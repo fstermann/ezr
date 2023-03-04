@@ -41,3 +41,8 @@ repos:
     rev: v2.2.0
     hooks:
       - id: setup-cfg-fmt
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    # Ruff version.
+    rev: "v0.0.254"
+    hooks:
+      - id: ruff

@@ -38,9 +38,12 @@ class Pattern:
         if not isinstance(pattern, str):
             raise TypeError(f"Pattern must be a string, not {type(pattern)}")
         if not self.is_valid_pattern(pattern):
-            raise ValueError("Pattern must be a single character or a range")
+            err = "Pattern must be a single character or a valid range"
+            raise ValueError(err)
         if re.match(ANY_RANGE, pattern):
             left, right = pattern.split("-")
+            if left == right:
+                raise ValueError("Range must specify distinct values")
             if left > right:
                 raise ValueError("Range must be in ascending order")
             self._annotation = "Range: "
@@ -57,8 +60,7 @@ class Pattern:
 
     @staticmethod
     def is_valid_pattern(pattern: str) -> bool:
-        # rf"^\\?({ANY_RANGE}|[{ALNUM}.^$| +_@-])$"
-        return re.match(rf"^\\?[a-zA-Z]|{ANY_RANGE}|.$", pattern) is not None
+        return re.match(rf"^(\\?[a-zA-Z]|{ANY_RANGE}|.)$", pattern) is not None
 
     @property
     def pattern(self) -> str:
