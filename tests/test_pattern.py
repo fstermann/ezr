@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 import re
 
 import pytest
@@ -37,18 +36,10 @@ class TestPattern:
         with pytest.raises(TypeError, match=r"Pattern must be a string"):
             Pattern(pattern)
 
-    @pytest.mark.parametrize(
-        "lower, upper, lazy",
-        list(
-            itertools.product(
-                (None, 0, 1, 2),
-                (None, 0, 1, 2),
-                (False, True),
-            ),
-        ),
-    )
-    def test_pattern_with_quantifier(self, lower, upper, lazy):
-        if lower and upper and lower > upper:
+    def test_pattern_with_quantifier(self, lower_upper_lazy):
+        lower, upper, lazy = lower_upper_lazy
+
+        if lower is not None and upper is not None and lower > upper:
             with pytest.raises(
                 ValueError,
                 match=r"Lower bound cannot be greater than upper bound",
@@ -71,7 +62,7 @@ class TestPattern:
 
     def test_pattern_from_quantifier(self):
         quantifier = Quantifier(lower=0, upper=1, lazy=True)
-        pattern = Pattern.from_quantifier("a", quantifier)
+        pattern = Pattern.from_quantifier("a", quantifier=quantifier)
         expected = Pattern("a", lower=0, upper=1, lazy=True)
 
         assert pattern == expected

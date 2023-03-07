@@ -69,3 +69,70 @@ class TestOperators:
             match=r"Can only repeat by an integer or a tuple of two integers",
         ):
             pattern * multiplier
+
+    @pytest.mark.parametrize(
+        "multiplier, expected",
+        [
+            (0, Quantifier(1, None)),
+            (1, Quantifier(2, None)),
+            (2, Quantifier(3, None)),
+        ],
+    )
+    def test_gt(self, multiplier, expected):
+        pattern = Pattern("a") > multiplier
+        assert pattern._quantifier == expected
+
+    @pytest.mark.parametrize(
+        "multiplier, expected",
+        [
+            (0, Quantifier(0, None)),
+            (1, Quantifier(1, None)),
+            (2, Quantifier(2, None)),
+        ],
+    )
+    def test_ge(self, multiplier, expected):
+        pattern = Pattern("a") >= multiplier
+        assert pattern._quantifier == expected
+
+    @pytest.mark.parametrize(
+        "multiplier, expected",
+        [
+            (1, Quantifier(None, 0)),
+            (2, Quantifier(None, 1)),
+        ],
+    )
+    def test_lt(self, multiplier, expected):
+        pattern = Pattern("a") < multiplier
+        assert pattern._quantifier == expected
+
+    def test_lt_invalid(self):
+        pattern = Pattern("a")
+        with pytest.raises(ValueError, match=r"Can only repeat by a positive integer"):
+            pattern < 0
+
+    @pytest.mark.parametrize(
+        "multiplier, expected",
+        [
+            (0, Quantifier(None, 0)),
+            (1, Quantifier(None, 1)),
+            (2, Quantifier(None, 2)),
+        ],
+    )
+    def test_le(self, multiplier, expected):
+        pattern = Pattern("a") <= multiplier
+        assert pattern._quantifier == expected
+
+    @pytest.mark.parametrize(
+        "multiplier",
+        [1.0, "b", (1, 2, 3), (1.1, 1), -1],
+    )
+    def test_comparison_invalid(self, multiplier):
+        pattern = Pattern("a")
+        with pytest.raises(ValueError, match=r"Can only repeat by a positive integer"):
+            pattern > multiplier
+        with pytest.raises(ValueError, match=r"Can only repeat by a positive integer"):
+            pattern < multiplier
+        with pytest.raises(ValueError, match=r"Can only repeat by a positive integer"):
+            pattern >= multiplier
+        with pytest.raises(ValueError, match=r"Can only repeat by a positive integer"):
+            pattern <= multiplier

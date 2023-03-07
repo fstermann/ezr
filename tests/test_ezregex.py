@@ -5,9 +5,11 @@ import re
 
 import pytest
 
+from ezr import CharacterSet
 from ezr import digit
 from ezr import EzRegex
 from ezr import Pattern
+from ezr import Quantifier
 
 
 class TestEzRegex:
@@ -102,3 +104,29 @@ class TestEzRegex:
         assert re.match(regex_comp, "f") is not None
         assert re.match(regex_comp, "b") is not None
         assert re.match(regex_comp, "c") is None
+
+    def test_with_quantifier(self, lower_upper_lazy):
+        lower, upper, lazy = lower_upper_lazy
+        if lower is not None and upper is not None and lower > upper:
+            with pytest.raises(
+                ValueError,
+                match=r"Lower bound cannot be greater than upper bound",
+            ):
+                regex = EzRegex("foo", "bar", lower=lower, upper=upper, lazy=lazy)
+            return
+        regex = EzRegex("foo", "bar", lower=lower, upper=upper, lazy=lazy)
+        if lower is None and upper is None:
+            assert regex.quantifier is None
+            return
+        assert regex.quantifier == Quantifier(lower, upper, lazy=lazy)
+
+    def test_from_quantifier(self, valid_quantifier, valid_patterns):
+        regex = EzRegex.from_quantifier(*valid_patterns, valid_quantifier)
+        assert regex.quantifier == valid_quantifier
+
+    def test_as_charset(self, pattern_expected):
+        pattern, expected = pattern_expected
+        regex = EzRegex(*pattern)
+        regex = regex.as_charset()
+        assert isinstance(regex, CharacterSet)
+        assert str(regex) == rf"[{expected}]"

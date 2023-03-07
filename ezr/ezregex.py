@@ -56,9 +56,11 @@ class Pattern:
             self._quantifier = Quantifier(lower=lower, upper=upper, lazy=lazy)
 
     @classmethod
-    def from_quantifier(cls, pattern, quantifier: Quantifier):
+    def from_quantifier(cls, *pattern, quantifier: Quantifier):
+        if len(pattern) != 1:
+            raise ValueError("Pattern must be a single string")
         return cls(
-            pattern,
+            pattern[0],
             lower=quantifier.lower,
             upper=quantifier.upper,
             lazy=quantifier.is_lazy,
@@ -215,9 +217,24 @@ class Pattern:
         return EzRegex(*other_patterns, "|", *self_patterns)
 
     def __gt__(self, other: int) -> EzRegex:
-        if not isinstance(other, int):
-            raise ValueError("Can only repeat by an integer")
+        if not isinstance(other, int) or other < 0:
+            raise ValueError("Can only repeat by a positive integer")
         return self.at_least(other + 1)
+
+    def __ge__(self, other: int) -> EzRegex:
+        if not isinstance(other, int) or other < 0:
+            raise ValueError("Can only repeat by a positive integer")
+        return self.at_least(other)
+
+    def __lt__(self, other: int) -> EzRegex:
+        if not isinstance(other, int) or other < 1:
+            raise ValueError("Can only repeat by a positive integer")
+        return self.at_most(other - 1)
+
+    def __le__(self, other: int) -> EzRegex:
+        if not isinstance(other, int) or other < 0:
+            raise ValueError("Can only repeat by a positive integer")
+        return self.at_most(other)
 
 
 class EzRegex(Pattern):
@@ -230,6 +247,7 @@ class EzRegex(Pattern):
         *patterns,
         lower: int | None = None,
         upper: int | None = None,
+        lazy: bool = False,
     ):
         self._patterns = []
         for pat in patterns:
@@ -240,11 +258,16 @@ class EzRegex(Pattern):
         self._lower = lower
         self._upper = upper
         if lower is not None or upper is not None:
-            self._quantifier = Quantifier(lower=lower, upper=upper)
+            self._quantifier = Quantifier(lower=lower, upper=upper, lazy=lazy)
 
     @classmethod
-    def from_quantifier(cls, patterns, quantifier: Quantifier):
-        return cls(*patterns, lower=quantifier.lower, upper=quantifier.upper)
+    def from_quantifier(cls, *patterns, quantifier: Quantifier):
+        return cls(
+            *patterns,
+            lower=quantifier.lower,
+            upper=quantifier.upper,
+            lazy=quantifier.is_lazy,
+        )
 
     @property
     def patterns_as_str(self) -> str:
@@ -376,7 +399,7 @@ class Quantifier(Pattern):
     ):
         if lower is None and upper is None:
             raise ValueError("At least one bound must be specified")
-        if lower and upper and lower > upper:
+        if lower is not None and upper is not None and lower > upper:
             raise ValueError("Lower bound cannot be greater than upper bound")
         lower = 0 if upper == 1 else lower
         self._lower = lower

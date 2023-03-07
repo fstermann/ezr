@@ -42,3 +42,11 @@ class TestGroup:
     def test_group_quantifier_nested(self):
         group = Group(Pattern("a").one_or_more(), Group("abc"))
         assert str(group) == "(a+(abc))"
+
+    def test_group_named(self):
+        group = Group("abc", name="foo")
+        assert str(group) == "(?P<foo>abc)"
+
+    def test_group_named_noncapture(self):
+        with pytest.raises(ValueError, match=r"Cannot name a non-capturing group"):
+            Group("abc", name="foo", capture=False)
