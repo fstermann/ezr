@@ -162,7 +162,8 @@ class Pattern:
         return f"{self._pattern}{self.quantifier_as_str}"
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self._pattern!r})"
+        quantifier = f", {self.quantifier!r}" if self.quantifier else ""
+        return f"{self.__class__.__name__}({self._pattern!r}{quantifier})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Pattern):
@@ -352,9 +353,15 @@ class Group(EzRegex):
 
     @name.setter
     def name(self, name: str | None):
-        if name and not re.match(r"\w+", name):
+        if name is None:
+            self._name = None
+            return
+        if not isinstance(name, str):
+            raise ValueError("Group name must be a string")
+        if not re.match(r"^(?=[a-zA-Z])\w+$", name):
             err = "Invalid group name. "
-            err += "Please use only alphanumeric characters."
+            err += "Please use only alphanumeric characters"
+            err += "and underscores, starting with a letter."
             raise ValueError(err)
         self._name = name
 

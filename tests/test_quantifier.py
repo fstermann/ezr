@@ -48,6 +48,12 @@ class TestQuantifier:
         with pytest.raises(ValueError):
             Quantifier()
 
+    def test_set_lazy(self):
+        quant = Quantifier(lower=1, lazy=False)
+        assert not quant.is_lazy
+        quant = quant.lazy()
+        assert quant.is_lazy
+
 
 class TestQuantifierPattern:
     def test_pattern_zero_or_more(self):
