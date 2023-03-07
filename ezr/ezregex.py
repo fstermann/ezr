@@ -34,6 +34,7 @@ class Pattern:
         pattern,
         lower: int | None = None,
         upper: int | None = None,
+        lazy: bool = False,
     ):
         if not isinstance(pattern, str):
             raise TypeError(f"Pattern must be a string, not {type(pattern)}")
@@ -52,11 +53,16 @@ class Pattern:
         self._lower = lower
         self._upper = upper
         if lower is not None or upper is not None:
-            self._quantifier = Quantifier(lower=lower, upper=upper)
+            self._quantifier = Quantifier(lower=lower, upper=upper, lazy=lazy)
 
     @classmethod
     def from_quantifier(cls, pattern, quantifier: Quantifier):
-        return cls(pattern, lower=quantifier.lower, upper=quantifier.upper)
+        return cls(
+            pattern,
+            lower=quantifier.lower,
+            upper=quantifier.upper,
+            lazy=quantifier.is_lazy,
+        )
 
     @staticmethod
     def is_valid_pattern(pattern: str) -> bool:
@@ -81,9 +87,9 @@ class Pattern:
         if self.pattern in string.digits:
             return "Digit"
         if self.pattern in string.ascii_lowercase:
-            return "Lowercase Letter"
+            return "Lowercase letter"
         if self.pattern in string.ascii_uppercase:
-            return "Uppercase Letter"
+            return "Uppercase letter"
         if self.pattern in string.whitespace:
             return "Whitespace"
         if self.pattern == "|":
@@ -156,6 +162,11 @@ class Pattern:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._pattern!r})"
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Pattern):
+            return False
+        return self._pattern == other._pattern and self._quantifier == other._quantifier
+
     def __add__(self, other: str | Pattern | EzRegex) -> EzRegex:
         self_patterns = self.__get_patterns(self)
         other_patterns = self.__get_patterns(other)
@@ -184,7 +195,7 @@ class Pattern:
         if (
             isinstance(other, tuple)
             and len(other) == 2
-            and all(isinstance(x, int) for x in other)
+            and all(isinstance(x, (int, type(None))) for x in other)
         ):
             return self.between(*other)
         err = "Can only repeat by an integer or a tuple of two integers"
@@ -347,7 +358,9 @@ class Group(EzRegex):
 
 
 class Quantifier(Pattern):
-    _lazy = False
+    _lower: int | None
+    _upper: int | None
+    _lazy: bool = False
     _special_cases: dict[tuple[int | None, int | None], str] = {
         (0, 1): "?",
         (0, None): "*",
@@ -356,9 +369,9 @@ class Quantifier(Pattern):
 
     def __init__(
         self,
-        *,
         lower: int | None = None,
         upper: int | None = None,
+        *,
         lazy: bool = False,
     ):
         if lower is None and upper is None:
@@ -419,3 +432,12 @@ class Quantifier(Pattern):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({str(self)})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Quantifier):
+            return False
+        return (
+            self._lower == other._lower
+            and self._upper == other._upper
+            and self._lazy == other._lazy
+        )

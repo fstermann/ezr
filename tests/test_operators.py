@@ -5,6 +5,8 @@ import pytest
 from ezr import CharacterSet
 from ezr import EzRegex
 from ezr import Group
+from ezr import Pattern
+from ezr import Quantifier
 
 
 class TestOperators:
@@ -34,3 +36,36 @@ class TestOperators:
         regex = EzRegex(a + b)
         assert str(regex) == expected
         assert isinstance(regex, EzRegex)
+
+    @pytest.mark.parametrize(
+        "multiplier, expected",
+        [
+            (0, Quantifier(0, 0)),
+            (1, Quantifier(1, 1)),
+            (2, Quantifier(2, 2)),
+            ((0, 1), Quantifier(0, 1)),
+            ((1, 2), Quantifier(1, 2)),
+            ((0, None), Quantifier(0, None)),
+            ((None, 1), Quantifier(None, 1)),
+        ],
+    )
+    def test_mul(self, multiplier, expected):
+        pattern = Pattern("a")
+        assert str(pattern) == "a"
+        pattern_multiplied = pattern * multiplier
+        pattern_rmultiplied = multiplier * pattern
+        assert pattern_multiplied._quantifier == expected
+        assert pattern_rmultiplied._quantifier == expected
+        assert pattern_multiplied == pattern_rmultiplied
+
+    @pytest.mark.parametrize(
+        "multiplier",
+        [1.0, "b", (1, 2, 3), (1.1, 1)],
+    )
+    def test_mul_invalid(self, multiplier):
+        pattern = Pattern("a")
+        with pytest.raises(
+            ValueError,
+            match=r"Can only repeat by an integer or a tuple of two integers",
+        ):
+            pattern * multiplier
