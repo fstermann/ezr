@@ -34,9 +34,9 @@ def valid_quantifier_params(request):
 #     return dict(zip(("lower", "upper", "lazy"), request.param))
 
 
-# @pytest.fixture(params=["a", "b", "1", "2"])
-# def valid_pattern(request):
-#     return request.param
+@pytest.fixture(params=["a", "b", "1", "2"])
+def valid_pattern(request):
+    return request.param
 
 
 @pytest.fixture(params=[("a", "b"), ("1", "2")])

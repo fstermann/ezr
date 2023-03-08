@@ -60,7 +60,12 @@ class TestPattern:
         assert pattern_init.quantifier == quantifier_expected
         assert str(pattern_init) == str(pattern_expected)
 
-    def test_pattern_from_quantifier(self):
+    def test_from_quantifier(self, valid_quantifier_params, valid_pattern):
+        valid_quantifier = Quantifier(**valid_quantifier_params)
+        regex = Pattern.from_quantifier(valid_pattern, quantifier=valid_quantifier)
+        assert regex.quantifier == valid_quantifier
+
+    def test_pattern_from_quantifier(self, valid_quantifier_params):
         quantifier = Quantifier(lower=0, upper=1, lazy=True)
         pattern = Pattern.from_quantifier("a", quantifier=quantifier)
         expected = Pattern("a", lower=0, upper=1, lazy=True)
