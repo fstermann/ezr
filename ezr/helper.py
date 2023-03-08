@@ -41,4 +41,4 @@ def any_of(
             new_patterns[0::2] = patterns
             return Group(*new_patterns)
         return CharacterSet(*patterns)
-    raise TypeError(f"Dont know how to handle {patterns}")
+    raise ValueError(f"Invalid pattern. Dont know how to handle {patterns}")
