@@ -7,7 +7,6 @@ from ezr.ezregex import Group
 from ezr.ezregex import Pattern
 from ezr.ezregex import Quantifier
 from ezr.helper import *
-from ezr.quantifier import *
 
 digit = Pattern(r"\d")
 whitespace = Pattern(r"\s")

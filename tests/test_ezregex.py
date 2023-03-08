@@ -120,8 +120,9 @@ class TestEzRegex:
             return
         assert regex.quantifier == Quantifier(lower, upper, lazy=lazy)
 
-    def test_from_quantifier(self, valid_quantifier, valid_patterns):
-        regex = EzRegex.from_quantifier(*valid_patterns, valid_quantifier)
+    def test_from_quantifier(self, valid_quantifier_params, valid_patterns):
+        valid_quantifier = Quantifier(**valid_quantifier_params)
+        regex = EzRegex.from_quantifier(*valid_patterns, quantifier=valid_quantifier)
         assert regex.quantifier == valid_quantifier
 
     def test_as_charset(self, pattern_expected):
